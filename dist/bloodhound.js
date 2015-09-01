@@ -371,7 +371,7 @@
                     jqXhr.done(done).fail(fail);
                 } else if (pendingRequestsCount < maxPendingRequests) {
                     pendingRequestsCount++;
-                    pendingRequests[fingerprint] = this._send(o).done(done).fail(fail).always(always);
+                    pendingRequests[fingerprint] = this._send(o).then(done).catch(fail).finally(always);
                 } else {
                     this.onDeckRequestArgs = [].slice.call(arguments, 0);
                 }
@@ -475,6 +475,12 @@
                         return false;
                     }
                 });
+                if (tokens.length === 0 && !matches) {
+                    matches = [];
+                    for (var datum in that.datums) {
+                        matches.push(datum);
+                    }
+                }
                 return matches ? _.map(unique(matches), function(id) {
                     return that.datums[id];
                 }) : [];
@@ -593,7 +599,7 @@
                     return;
                 }
                 settings = this.prepare(this._settings());
-                this.transport(settings).fail(onError).done(onResponse);
+                this.transport(settings).catch(onError).finally(onResponse);
                 function onError() {
                     cb(true);
                 }
@@ -696,7 +702,7 @@
             o.transform = o.filter || o.transform;
             o.cacheKey = o.cacheKey || o.url;
             o.thumbprint = VERSION + o.thumbprint;
-            o.transport = o.transport ? callbackToDeferred(o.transport) : $.ajax;
+            o.transport = o.transport ? o.transport : $.ajax;
             return o;
         }
         function parseRemote(o) {
@@ -724,7 +730,7 @@
             o.transform = o.filter || o.transform;
             o.prepare = toRemotePrepare(o);
             o.limiter = toLimiter(o);
-            o.transport = o.transport ? callbackToDeferred(o.transport) : $.ajax;
+            o.transport = o.transport ? o.transport : $.ajax;
             delete o.replace;
             delete o.wildcard;
             delete o.rateLimitBy;
@@ -779,23 +785,6 @@
                 };
             }
         }
-        function callbackToDeferred(fn) {
-            return function wrapper(o) {
-                var deferred = $.Deferred();
-                fn(o, onSuccess, onError);
-                return deferred;
-                function onSuccess(resp) {
-                    _.defer(function() {
-                        deferred.resolve(resp);
-                    });
-                }
-                function onError(err) {
-                    _.defer(function() {
-                        deferred.reject(err);
-                    });
-                }
-            };
-        }
     }();
     var Bloodhound = function() {
         "use strict";
@@ -809,6 +798,8 @@
             this.local = o.local;
             this.remote = o.remote ? new Remote(o.remote) : null;
             this.prefetch = o.prefetch ? new Prefetch(o.prefetch) : null;
+            this.filter = typeof o.filter === "function" ? o.filter : null;
+            this.filterAsync = typeof o.filterAsync === "function" ? o.filterAsync : null;
             this.index = new SearchIndex({
                 identify: this.identify,
                 datumTokenizer: o.datumTokenizer,
@@ -876,6 +867,9 @@
             search: function search(query, sync, async) {
                 var that = this, local;
                 local = this.sorter(this.index.search(query));
+                if (this.filter) {
+                    local = this.filter(local);
+                }
                 sync(this.remote ? local.slice() : local);
                 if (this.remote && local.length < this.sufficient) {
                     this.remote.get(query, processRemote);
@@ -890,6 +884,10 @@
                             return that.identify(r) === that.identify(l);
                         }) && nonDuplicates.push(r);
                     });
+                    that.add(nonDuplicates);
+                    if (that.filterAsync) {
+                        nonDuplicates = that.filterAsync(nonDuplicates);
+                    }
                     async && async(nonDuplicates);
                 }
             },
