@@ -101,6 +101,13 @@ var SearchIndex = window.SearchIndex = (function() {
         }
       });
 
+      if (tokens.length === 0 && !matches) {
+        matches = [];
+        for (var datum in that.datums) {
+          matches.push(datum);
+        }
+      }
+
       return matches ?
         _.map(unique(matches), function(id) { return that.datums[id]; }) : [];
     },

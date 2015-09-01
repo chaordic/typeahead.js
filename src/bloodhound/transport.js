@@ -61,14 +61,14 @@ var Transport = (function() {
 
       // a request is already in progress, piggyback off of it
       if (jqXhr = pendingRequests[fingerprint]) {
-        jqXhr.done(done).fail(fail);
+        jqXhr.finally(done).catch(fail);
       }
 
       // under the pending request threshold, so fire off a request
       else if (pendingRequestsCount < maxPendingRequests) {
         pendingRequestsCount++;
         pendingRequests[fingerprint] =
-          this._send(o).done(done).fail(fail).always(always);
+          this._send(o).then(done).catch(fail).finally(always);
       }
 
       // at the pending request threshold, so hang out in the on deck circle

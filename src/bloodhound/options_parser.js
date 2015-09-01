@@ -66,7 +66,7 @@ var oParser = (function() {
 
     o.cacheKey = o.cacheKey || o.url;
     o.thumbprint = VERSION + o.thumbprint;
-    o.transport = o.transport ? callbackToDeferred(o.transport) : $.ajax;
+    o.transport = o.transport ? o.transport : $.ajax;
 
     return o;
   }
@@ -101,7 +101,7 @@ var oParser = (function() {
 
     o.prepare = toRemotePrepare(o);
     o.limiter = toLimiter(o);
-    o.transport = o.transport ? callbackToDeferred(o.transport) : $.ajax;
+    o.transport = o.transport ? o.transport : $.ajax;
 
     delete o.replace;
     delete o.wildcard;
@@ -169,27 +169,5 @@ var oParser = (function() {
     function throttle(wait) {
       return function throttle(fn) { return _.throttle(fn, wait); };
     }
-  }
-
-  function callbackToDeferred(fn) {
-    return function wrapper(o) {
-      var deferred = $.Deferred();
-
-      fn(o, onSuccess, onError);
-
-      return deferred;
-
-      function onSuccess(resp) {
-        // defer in case fn is synchronous, otherwise done
-        // and always handlers will be attached after the resolution
-        _.defer(function() { deferred.resolve(resp); });
-      }
-
-      function onError(err) {
-        // defer in case fn is synchronous, otherwise done
-        // and always handlers will be attached after the resolution
-        _.defer(function() { deferred.reject(err); });
-      }
-    };
   }
 })();

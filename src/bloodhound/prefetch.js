@@ -75,7 +75,7 @@ var Prefetch = (function() {
       if (!cb) { return; }
 
       settings = this.prepare(this._settings());
-      this.transport(settings).fail(onError).done(onResponse);
+      this.transport(settings).catch(onError).finally(onResponse);
 
       function onError() { cb(true); }
       function onResponse(resp) { cb(null, that.transform(resp)); }
