@@ -24,6 +24,8 @@ var Bloodhound = (function() {
     this.local = o.local;
     this.remote = o.remote ? new Remote(o.remote) : null;
     this.prefetch = o.prefetch ? new Prefetch(o.prefetch) : null;
+    this.filter = typeof o.filter === 'function' ? o.filter : null;
+    this.filterAsync = typeof o.filterAsync === 'function' ? o.filterAsync : null;
 
     // the backing data structure used for fast pattern matching
     this.index = new SearchIndex({
@@ -134,6 +136,10 @@ var Bloodhound = (function() {
 
       local = this.sorter(this.index.search(query));
 
+      if (this.filter) {
+        local = this.filter(local);
+      }
+
       // return a copy to guarantee no changes within this scope
       // as this array will get used when processing the remote results
       sync(this.remote ? local.slice() : local);
@@ -158,6 +164,12 @@ var Bloodhound = (function() {
             return that.identify(r) === that.identify(l);
           }) && nonDuplicates.push(r);
         });
+
+        that.add(nonDuplicates);
+
+        if (that.filterAsync) {
+          nonDuplicates = that.filterAsync(nonDuplicates);
+        }
 
         async && async(nonDuplicates);
       }
