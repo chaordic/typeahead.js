@@ -368,7 +368,7 @@
                     return;
                 }
                 if (jqXhr = pendingRequests[fingerprint]) {
-                    jqXhr.done(done).fail(fail);
+                    jqXhr.finally(done).catch(fail);
                 } else if (pendingRequestsCount < maxPendingRequests) {
                     pendingRequestsCount++;
                     pendingRequests[fingerprint] = this._send(o).then(done).catch(fail).finally(always);
